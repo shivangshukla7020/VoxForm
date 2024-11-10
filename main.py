@@ -7,6 +7,8 @@ import streamlit as st
 import time
 import sys
 
+# Gender Initialisation
+gender = "Male"
 
 # load the saved model (after training)
 # construct the model
@@ -65,75 +67,159 @@ def recognize_speech_from_wav(file_path):
         except sr.RequestError as e:  
             st.error(f"Could not request results {0}".format(e))  
             return ""  
-        except sr.UnknownValueError:  
-            st.error("Unknown error occurred")  
-            return ""  
+        except sr.UnknownValueError:   
+            return "No input detected"  
 
 def check_gender(male,female,if_male):
   if(if_male and female > male):
     SpeakText("Sorry you are not the correct fit for the form !")
+    st.subheader("This form is for 'MALE' candidates only. Thank you")
     sys.exit()
 
 
 def takeInput():
+    if(not check_voice_activity):
+        SpeakText("Sorry could not hear you")
+        return "No input detected"
     male, female = record_audio()
     check_gender(male,female,True)
     text = recognize_speech_from_wav("test.wav")
     return text
+
+import librosa  
+import numpy as np  
+
+import librosa  
+import numpy as np  
+
+def check_voice_activity(wav_file, threshold=0.1):  
+    """  
+    Check for presence of voice activity in a WAV file.  
+    
+    Parameters:  
+    wav_file (str): Path to the WAV file.  
+    threshold (float): Energy threshold to consider for voice activity.  
+    
+    Returns:  
+    bool: True if voice activity is detected, False otherwise.  
+    """  
+    # Load the audio file  
+    y, sr = librosa.load(wav_file, sr=None)  
+    
+    # Calculate the short-time energy of the audio signal  
+    frame_length = int(sr * 0.5)  # Fixed frame length for 0.5 seconds  
+    hop_length = frame_length // 2  # Overlap between frames  
+    energy = np.array([  
+        np.sum(np.square(y[i:i + frame_length]))  
+        for i in range(0, len(y), hop_length)  
+        if i + frame_length <= len(y)  
+    ])  
+    
+    # Check if the energy exceeds the threshold  
+    voice_activity_detected = np.any(energy > threshold)  
+
+    return voice_activity_detected
+
     
 
 # Streamlit UI  
 
-st.title("User Input Form")  
+st.title(f"User Input Form (Target = {gender})")  
 st.subheader("Please provide your details:") 
 st.caption("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without the need for typing. You will be prompted to give information one step at a time, with 5 seconds allocated for each response. Let’s get started!.")
-st.caption("Say 'START' to begin filling the form.")
- 
 
-# Input fields for user details  
-
-first_name = st.session_state.text_input = ""
-#first_name_input = st.text_input("First Name")
-last_name = st.text_input("Last Name")
-age = st.number_input("Age", min_value=0, max_value=120)  
-roll_number = st.text_input("Roll Number")
-phone_number = st.text_input("Phone Number")
-city = st.text_input("City")
-country = st.text_input("Country")  
-
+  
 
 # Starting Message
-SpeakText("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without the need for typing. You will be prompted to give information one step at a time, with 5 seconds allocated for each response. Let’s get started!. Say 'START' to begin filling the form.")
+SpeakText("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without the need for typing. You will be prompted to give information one step at a time, with 5 seconds allocated for each response. Let’s get started!.")
+
+st.subheader("Say 'START' to begin filling the form.")
+SpeakText("Say 'START' to begin filling the form.")
 
 # Condition to start filling the form 
 
-is_start = takeInput()
-while(is_start != "start"):
-  is_start = takeInput()
+while(takeInput() != "start"):
+    pass
+
+# Function to add custom CSS  
+def add_custom_css():  
+    st.markdown(  
+        """  
+        <style>  
+    /* Increase specificity for input fields */  
+    div[data-testid="stTextInput"] > div > input,   
+    div[data-testid="stNumberInput"] > div > input {  
+        background-color: #e0f7fa;  
+        border: 2px solid #009688;  
+        border-radius: 5px;  
+        padding: 10px;  
+        font-size: 18px;  
+        color: #333;  
+        opacity : 1 !important;
+        transition: opacity 0s !important;  
+    }  
+
+    /* Ensure full opacity for inputs and labels */  
+    div[data-testid="stTextInput"] > div > input:disabled,   
+    div[data-testid="stNumberInput"] > div > input:disabled {  
+        background-color: #e0f7fa;  
+        border: 2px solid #00796b;  
+        color: #333;  
+        opacity: 1 !important;  
+    }  
+
+    div[data-testid="stTextInput"] > div > label,   
+    div[data-testid="stNumberInput"] > div > label {  
+        color: #00796b;  
+        font-weight: bold;  
+        opacity: 1 !important;  
+    }  
+    </style>    
+        """,  
+        unsafe_allow_html=True  
+    )  
+
+# Adding custom CSS  
+add_custom_css() 
+
 
 SpeakText("What is your first name ")
-st.write(takeInput(),first_name)
-#st.write(takeInput(),first_name_input)
+first_name = takeInput()
+st.text_input(label="First Name ?",value=first_name,disabled=True)
+
 
 SpeakText("What is your last name")
-st.write(takeInput(),last_name)
+last_name = takeInput()
+st.text_input("Last Name ?",value=last_name,disabled=True)
 
 
 SpeakText("Please tell your age")
-st.write(takeInput(),age)
+try:
+    age = int(takeInput())
+    st.number_input(label="Age ?",value=age,disabled=True)  
+except ValueError:
+    st.number_input(label="Age ?",value=0,disabled=True)  
+    pass
 
 
 SpeakText("What is your roll number")
-st.write(takeInput(),roll_number)
+roll_number = st.text_input("Roll No",value=takeInput(),disabled=True)
 
 
-SpeakText("Speak up your phone number")
-st.write(takeInput(),phone_number)
+SpeakText("Enter your phone number")
+phone_number = st.text_input("Phone no",value=takeInput(),disabled=True)
 
 
 SpeakText("Name your city")
-st.write(takeInput(),city)
-
+city = takeInput()
+city = city[0].upper() + city[1:]
+st.text_input("City",value=city,disabled=True)
 
 SpeakText("What is your country name")
-st.write(takeInput(),country)
+country = takeInput()
+country = country[0].upper + country[1:]
+st.text_input("Country",value=country,disabled=True)  
+
+
+st.subheader("Thank You")
+SpeakText("Thank you for filling this form")
