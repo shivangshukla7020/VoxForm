@@ -15,6 +15,7 @@ RATE = 16000
 
 SILENCE = 30
 
+
 def is_silent(snd_data):
     "Returns 'True' if below the 'silent' threshold"
     return max(snd_data) < THRESHOLD
@@ -61,7 +62,6 @@ def add_silence(snd_data, seconds):
     return r
 
 def record():
-    import time
     """
     Record a word or words from the microphone and 
     return the data as an array of signed shorts.
@@ -79,9 +79,7 @@ def record():
     snd_started = False
 
     r = array('h')
-
-    currTime = time.time()
-
+    
     while 1:
         # little endian, signed short
         snd_data = array('h', stream.read(CHUNK_SIZE))
@@ -96,7 +94,7 @@ def record():
         elif not silent and not snd_started:
             snd_started = True
 
-        if time.time() - currTime > 5:
+        if snd_started and num_silent > SILENCE:
             break
 
     sample_width = p.get_sample_size(FORMAT)
@@ -120,6 +118,7 @@ def record_to_file(path):
     wf.setframerate(RATE)
     wf.writeframes(data)
     wf.close()
+
 
 
 
