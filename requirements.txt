@@ -1,0 +1,8 @@
+pyaudio  
+wave  
+librosa   
+tensorflow
+speechrecognition  
+pyttsx3  
+streamlit    
+numpy   

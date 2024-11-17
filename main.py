@@ -94,7 +94,7 @@ st.set_page_config(page_title="Audio-Based Form", page_icon="🗣️")
 placeholder = st.empty()
 
 with placeholder.container():
-    st.title("VoxForm")  
+    st.title(f"VoxForm (Target : {gender})")  
     st.markdown(
         """ 
         ### 🚀 Welcome to our automated audio-based form!  
@@ -102,13 +102,15 @@ with placeholder.container():
         🗣️ This system allows you to provide your details quickly and easily without typing.  
         - You will be prompted step by step.  
         - Provide a response **one second after the question has been asked**.  
+        - Kindly speak loud and clear.
+        - Fill the form in a quite environment.
         - Say **'START'** to begin (under 30 sec).  
         ---  
         """ 
     )  
     st.write("👋 Let's get started!") 
 
-# SpeakText("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without typing. Please take a moment to carefully read the instructions below to ensure a smooth and seamless experience.")
+SpeakText("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without typing. Please take a moment to carefully read the instructions below to ensure a smooth and seamless experience.")
 
 time.sleep(3)
 SpeakText("Say 'START' to begin filling the form.")
