@@ -1,6 +1,6 @@
 ## Overview  
 
-VoxForm is an innovative AI-powered web application designed to revolutionize the way we fill out forms by utilizing audio input. By leveraging advanced automatic gender detection voice models, VoxForm streamlines the form completion process through voice commands and enhances user engagement based on gender.  
+VoxForm is an innovative AI-powered web application designed to revolutionize the way we fill out forms by utilizing audio input. By leveraging advanced automatic gender detection voice model, VoxForm streamlines the form completion process through voice commands and helps controlling user engagement based on gender.  
 
 ## Features  
 
@@ -19,6 +19,7 @@ VoxForm is an innovative AI-powered web application designed to revolutionize th
 ## Applications
 1. Selective data collection (including both audio and corresponding text) for data science and AI developent.
 2. A form filling software that is effective for visually impaired people or those with special needs.
+3. A multimedia form with both audio and text input can be utilised for security and verification needs.
 
 ## Installation  
 
