@@ -110,7 +110,7 @@ with placeholder.container():
     )  
     st.write("👋 Let's get started!") 
 
-SpeakText("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without typing. Please take a moment to carefully read the instructions below to ensure a smooth and seamless experience.")
+# SpeakText("Welcome to our automated audio-based form! This system allows you to provide your details quickly and easily without typing. Please take a moment to carefully read the instructions below to ensure a smooth and seamless experience.")
 
 time.sleep(3)
 SpeakText("Say 'START' to begin filling the form.")
