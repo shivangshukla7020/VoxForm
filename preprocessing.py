@@ -1,90 +1,124 @@
+import pyaudio
+import os
 import wave
 import librosa
 import numpy as np
 from sys import byteorder
 from array import array
 from struct import pack
-from audio_recorder_streamlit import audio_recorder
-import streamlit as st  
-
-# Constants for audio processing  
-RATE = 16000  
-THRESHOLD = 500  # Silence threshold  
-MAXIMUM = 16384  
-SILENCE_DURATION_LIMIT = 3  # Stop recording after 3 seconds of silence  
 
 
-class AudioProcessor:  
-    """Custom audio processor for detecting silence and storing audio data."""  
-    def __init__(self):  
-        self.frames = []  
-        self.silence_duration = 0  # Counter for silence duration  
-        self.is_speaking = True  
+THRESHOLD = 500
+CHUNK_SIZE = 1024
+FORMAT = pyaudio.paInt16
+RATE = 16000
 
-    def process_audio(self, audio_data):  
-        """Process incoming audio data."""  
-        if is_silent(audio_data):  
-            self.silence_duration += 1  
-        else:  
-            self.silence_duration = 0  
-            self.frames.append(audio_data)  
+SILENCE = 30
 
-        # Stop recording after prolonged silence  
-        if self.silence_duration > SILENCE_DURATION_LIMIT * RATE / 1024:  # Assuming frame size of 1024  
-            self.is_speaking = False  
 
-    def get_audio_data(self):  
-        """Retrieve the recorded audio data."""  
-        if self.frames:  
-            return np.concatenate(self.frames)  
-        return np.array([])  
+def is_silent(snd_data):
+    "Returns 'True' if below the 'silent' threshold"
+    return max(snd_data) < THRESHOLD
 
-def is_silent(audio_data):  
-    """Check if the audio data is silent."""  
-    return max(audio_data) < THRESHOLD  
+def normalize(snd_data):
+    "Average the volume out"
+    MAXIMUM = 16384
+    times = float(MAXIMUM)/max(abs(i) for i in snd_data)
 
-def trim(audio_data):  
-    """Trim the silent parts from the start and end of the audio data."""  
-    return np.trim_zeros(audio_data, trim="fb")  
+    r = array('h')
+    for i in snd_data:
+        r.append(int(i*times))
+    return r
 
-def normalize(audio_data):  
-    """Normalize the audio to a consistent volume."""  
-    times = float(MAXIMUM) / max(abs(i) for i in audio_data)  
-    return (audio_data * times).astype(np.int16)  
+def trim(snd_data):
+    "Trim the blank spots at the start and end"
+    def _trim(snd_data):
+        snd_started = False
+        r = array('h')
 
-def record_to_file(output_file="output.wav"):  
-    """  
-    Automatically records audio until silence is detected and saves it to a WAV file.  
+        for i in snd_data:
+            if not snd_started and abs(i)>THRESHOLD:
+                snd_started = True
+                r.append(i)
 
-    Parameters:  
-    - output_file: Path to save the WAV file.  
-    """  
-    # Create an audio processor  
-      
+            elif snd_started:
+                r.append(i)
+        return r
 
-    # Process audio data if available  
-    if audio_data is not None:  
-        audio_processor.process_audio(audio_data)  
+    # Trim to the left
+    snd_data = _trim(snd_data)
 
-    # Retrieve and process audio data  
-    audio_data = audio_processor.get_audio_data()  
-    if len(audio_data) == 0:  
-        st.warning("No audio recorded.")  
-        return  
+    # Trim to the right
+    snd_data.reverse()
+    snd_data = _trim(snd_data)
+    snd_data.reverse()
+    return snd_data
 
-    # Trim and normalize audio  
-    audio_data = normalize(trim(audio_data))  
-    audio_data = array("h", audio_data)  
-    audio_bytes = pack("<" + ("h" * len(audio_data)), *audio_data)  
+def add_silence(snd_data, seconds):
+    "Add silence to the start and end of 'snd_data' of length 'seconds' (float)"
+    r = array('h', [0 for i in range(int(seconds*RATE))])
+    r.extend(snd_data)
+    r.extend([0 for i in range(int(seconds*RATE))])
+    return r
 
-    # Save audio to a WAV file  
-    with wave.open(output_file, "wb") as wf:  
-        wf.setnchannels(1)  # Mono channel  
-        wf.setsampwidth(2)  # 16-bit PCM  
-        wf.setframerate(RATE)  
-        wf.writeframes(audio_bytes)  
+def record():
+    """
+    Record a word or words from the microphone and 
+    return the data as an array of signed shorts.
+    Normalizes the audio, trims silence from the 
+    start and end, and pads with 0.5 seconds of 
+    blank sound to make sure VLC et al can play 
+    it without getting chopped off.
+    """
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=1, rate=RATE,
+        input=True, output=True,
+        frames_per_buffer=CHUNK_SIZE)
 
-    st.success(f"Audio saved to {output_file}")
+    num_silent = 0
+    snd_started = False
+
+    r = array('h')
+    
+    while 1:
+        # little endian, signed short
+        snd_data = array('h', stream.read(CHUNK_SIZE))
+        if byteorder == 'big':
+            snd_data.byteswap()
+        r.extend(snd_data)
+
+        silent = is_silent(snd_data)
+
+        if silent and snd_started:
+            num_silent += 1
+        elif not silent and not snd_started:
+            snd_started = True
+
+        if snd_started and num_silent > SILENCE:
+            break
+
+    sample_width = p.get_sample_size(FORMAT)
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    r = normalize(r)
+    r = trim(r)
+    r = add_silence(r, 0.5)
+    return sample_width, r
+
+def record_to_file(path):
+    "Records from the microphone and outputs the resulting data to 'path'"
+    sample_width, data = record()
+    data = pack('<' + ('h'*len(data)), *data)
+
+    wf = wave.open(path, 'wb')
+    wf.setnchannels(1)
+    wf.setsampwidth(sample_width)
+    wf.setframerate(RATE)
+    wf.writeframes(data)
+    wf.close()
+
 
 
 
@@ -149,6 +183,3 @@ def create_model(vector_length=128):
     # print summary of the model
     model.summary()
     return model
-
-
-
